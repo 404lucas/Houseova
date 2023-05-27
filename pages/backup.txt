@@ -1,0 +1,75 @@
+ if (isset($_POST['atualizar']) ){
+
+            $quantidade = $_POST['quantidadeAtual'];
+            $produto_id = $_POST['id_produto'];
+            $destinacao = $_POST['destino'];
+
+            /**if($quantidade <=0){
+                echo '<div class="alert alert-danger" style="text-align:center; margin-top:10px;" role="alert">
+                <i class="fa-solid fa-times"></i>
+                Erro: você não pode atualizar a quantidade do produto para menor ou igual a zero.</div>';
+            }**/
+
+                //Recuperando valor na carteira
+                $sql = server::connect()->prepare("SELECT * FROM `tb_admin.estoque_valor`");
+                $sql->execute();
+                $saldo = $sql->fetch();
+
+                $sql = server::connect()->prepare("SELECT * FROM `tb_admin.estoque`");
+                $sql->execute();
+                $value = $sql->fetch();
+
+                $nome = $value['nome'];
+                $data = date('Y-m-d H:i:s');
+
+                if ($quantidade > $value['quantidade']){
+                $diferenca = $quantidade - $value['quantidade'];
+                $gasto = $diferenca * $value['preco'];
+                $responsavel = $_SESSION['nome'];
+
+                if($destinacao == 'Instalação'){
+                    $saldo = $saldo['valor_inst'];
+                    $desconto = $saldo - $gasto;
+                server::connect()->exec("UPDATE `tb_admin.estoque_valor` SET valor_inst = '$desconto'");
+                   
+                }
+                if($destinacao == 'Expansão'){
+                    $saldo = $saldo['valor_exp'];
+                    $desconto = $saldo - $gasto;
+                server::connect()->exec("UPDATE `tb_admin.estoque_valor` SET valor_exp = '$desconto'");
+                    
+                }
+                if($destinacao == 'Interno'){
+                    $saldo = $saldo['valor_int'];
+                    $desconto = $saldo - $gasto;
+                server::connect()->exec("UPDATE `tb_admin.estoque_valor` SET valor_int = '$desconto'");
+                    
+                }
+
+                //Atualizando o registro
+                $rgs = server::connect()->prepare("INSERT INTO `tb_admin.estoque_registro` VALUES (?,?,?,?,?,?)");
+                $rgs->execute(array("Reposição",$nome,$diferenca,$gasto,$responsavel,$data));
+
+
+                }
+
+                if ($quantidade < $value['quantidade']) {
+                    $responsavel = $_SESSION['nome'];
+    
+                    //Atualizando o registro
+                    $rgs = server::connect()->prepare("INSERT INTO `tb_admin.estoque_registro` VALUES (?,?,?,?,?,?)");
+                    $rgs->execute(array("Retirada",$nome,$diferenca,"Sem gasto",$responsavel,$data));
+    
+    
+                    }
+
+                //Atualizando a quantidade
+                server::connect()->exec("UPDATE `tb_admin.estoque` SET quantidade = '$quantidade' WHERE id = '$produto_id' ");
+                server::connect()->exec("UPDATE `tb_admin.estoque` SET data = '$data' WHERE id = '$produto_id' ");
+                echo '<div class="alert alert-success" style="text-align:center; margin-top:10px;" role="alert">
+                <i class="fa-solid fa-circle-check"></i>
+                Você atualizou a quantidade do produto: <b>'.$_POST['nomenome'].'</b>, id: <b>'.$produto_id.'</b></div>';
+            
+            
+        }   
+        
